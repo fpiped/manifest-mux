@@ -1,0 +1,24 @@
+[project]
+name = "streaming-downloader"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "Downloader per titoli via yt-dlp"
+dependencies = [
+    "pycryptodomex>=3.23.0",
+    "yt-dlp>=2026.7.4",
+]
+
+[project.scripts]
+streaming-downloader = "streaming_downloader:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["streaming_downloader"]
+packages = ["yt_dlp_plugins", "yt_dlp_plugins.extractor"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
