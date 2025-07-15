@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -11,38 +10,6 @@ from urllib.parse import urlsplit
 
 
 DEFAULT_CONCURRENT_FRAGMENTS = "1"
-ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
-
-
-def load_env(path: Path = ENV_FILE) -> dict[str, str]:
-    """Minimal .env parser: KEY=VALUE lines, ignores comments and blanks."""
-    env: dict[str, str] = {}
-    if not path.is_file():
-        return env
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        env[key.strip()] = value.strip().strip("'\"")
-    return env
-
-
-def _env(defaults: dict[str, str]) -> dict[str, str]:
-    """Merge .env file with os.environ (os.environ takes precedence)."""
-    merged = defaults | load_env()
-    for key in defaults:
-        if key in os.environ:
-            merged[key] = os.environ[key]
-    return merged
-
-
-def get_config() -> dict[str, str]:
-    return _env({
-        "SC_CONCURRENT_FRAGMENTS": DEFAULT_CONCURRENT_FRAGMENTS,
-    })
 
 
 def validate_url(value: str) -> str:
@@ -109,23 +76,22 @@ def build_command(
 
 
 def parser() -> argparse.ArgumentParser:
-    config = get_config()
     result = argparse.ArgumentParser(
-        description="Scarica un titolo via yt-dlp."
+        description="Download a title with yt-dlp."
     )
     result.add_argument("url", type=validate_url)
     result.add_argument(
         "--output-path",
         type=Path,
         metavar="FILE",
-        help="percorso del file MKV finale (default: ~/Downloads/<titolo>.mkv)",
+        help="final MKV file path (default: ~/Downloads/<title>.mkv)",
     )
     result.add_argument(
         "--concurrent-fragments",
         type=positive_int,
-        default=positive_int(config["SC_CONCURRENT_FRAGMENTS"]),
+        default=positive_int(DEFAULT_CONCURRENT_FRAGMENTS),
         metavar="N",
-        help=f"numero di frammenti scaricati in parallelo (default: {config['SC_CONCURRENT_FRAGMENTS']})",
+        help=f"number of fragments downloaded in parallel (default: {DEFAULT_CONCURRENT_FRAGMENTS})",
     )
     return result
 
@@ -139,14 +105,14 @@ def main(argv: list[str] | None = None) -> int:
         yt_dlp = str(local_yt_dlp)
     if yt_dlp is None:
         print(
-            "Errore: yt-dlp non trovato. Segui le istruzioni nel README.",
+            "Error: yt-dlp was not found. Follow the README instructions.",
             file=sys.stderr,
         )
         return 2
 
     if shutil.which("ffmpeg") is None:
         print(
-            "Errore: ffmpeg non trovato. Segui le istruzioni nel README.",
+            "Error: ffmpeg was not found. Follow the README instructions.",
             file=sys.stderr,
         )
         return 2
@@ -162,12 +128,12 @@ def main(argv: list[str] | None = None) -> int:
         try:
             subprocess.run(command, check=True)
         except subprocess.CalledProcessError as error:
-            print(f"yt-dlp è terminato con codice {error.returncode}", file=sys.stderr)
+            print(f"yt-dlp exited with code {error.returncode}", file=sys.stderr)
             return error.returncode or 1
 
         if not filepath_marker.is_file():
             print(
-                "Errore: impossibile determinare il file scaricato.",
+                "Error: unable to determine the downloaded file.",
                 file=sys.stderr,
             )
             return 1
@@ -175,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         marker_lines = filepath_marker.read_text(encoding="utf-8").splitlines()
         if not marker_lines:
             print(
-                "Errore: impossibile determinare il file scaricato.",
+                "Error: unable to determine the downloaded file.",
                 file=sys.stderr,
             )
             return 1

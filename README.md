@@ -1,50 +1,41 @@
 # streaming-downloader
 
-Downloader per titoli via `yt-dlp`. Passa un URL e scarica il video in MKV con
-tutte le tracce audio disponibili (incluse, quando presenti, originale, italiano
-e inglese) e tutti i sottotitoli incorporati.
+Download titles through `yt-dlp` as MKV files, preserving every available audio
+track and embedding all available subtitles.
 
-## Installazione
+## Installation
 
 ```bash
 uv sync
 ```
 
-Su macOS, `ffmpeg` può essere installato con Homebrew:
+On macOS, install `ffmpeg` with Homebrew:
 
 ```bash
 brew install ffmpeg
 ```
 
-## Utilizzo
+## Usage
 
 ```bash
 uv run streaming-downloader 'https://example.com/it/watch/12015?e=38156' \
-  --output-path ~/Movies/mio-titolo.mkv
+  --output-path ~/Movies/my-title.mkv
 ```
 
-Parametri:
-- `url` (obbligatorio): URL https del titolo
-- `--output-path FILE`: percorso del file MKV finale (default: `~/Downloads/<titolo>.mkv`)
-- `--concurrent-fragments N`: frammenti in parallelo (default: 1)
+Arguments:
 
-Racchiudi sempre l'URL tra apici singoli quando lo incolli nel terminale. In
-particolare, zsh interpreta `?` come wildcard: senza apici un URL con `?e=...`
-viene rifiutato dalla shell prima che il programma possa riceverlo.
+- `url` (required): HTTPS URL of the title.
+- `--output-path FILE`: final MKV file path (default: `~/Downloads/<title>.mkv`).
+- `--concurrent-fragments N`: fragments downloaded in parallel (default: 1).
 
-Durante il download tutti i file temporanei (frammenti, sottotitoli e stato di
-yt-dlp) sono salvati nella directory temporanea del sistema. Al termine viene
-conservato solo il file MKV finale nel percorso scelto.
+Always wrap pasted URLs in single quotes. In particular, zsh interprets `?` as
+a wildcard, so an unquoted URL containing `?e=...` is rejected by the shell
+before the application receives it.
 
-## Configurazione
+All temporary files (fragments, subtitles, and yt-dlp state) are written to the
+system temporary directory. Only the final MKV is kept at the selected path.
 
-Copia `.env.example` come `.env` per cambiare i default:
-
-```
-SC_CONCURRENT_FRAGMENTS=1
-```
-
-## Test
+## Tests
 
 ```bash
 uv run python -m unittest discover -s tests -v
