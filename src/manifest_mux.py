@@ -10,8 +10,6 @@ from urllib.parse import urlsplit
 
 from manifest_mux_core.media import MediaValidationError, validate_media
 from manifest_mux_core.models import (
-    DEFAULT_CONCURRENT_FRAGMENTS,
-    DEFAULT_FRAGMENT_RETRIES,
     DownloadOptions,
     TrackSelection,
 )
@@ -28,17 +26,6 @@ def validate_url(value: str) -> str:
     if parsed.scheme != "https" or not parsed.hostname:
         raise argparse.ArgumentTypeError("provide a valid HTTPS URL")
     return value
-
-
-def positive_int(value: str) -> int:
-    """Parse a strictly positive integer for argparse."""
-    try:
-        number = int(value)
-    except ValueError as error:
-        raise argparse.ArgumentTypeError("must be an integer") from error
-    if number < 1:
-        raise argparse.ArgumentTypeError("must be greater than zero")
-    return number
 
 
 def percentage(value: str) -> float:
@@ -172,44 +159,20 @@ def run_download(
 
 def add_download_arguments(result: argparse.ArgumentParser) -> None:
     result.add_argument("url", type=validate_url)
-    result.add_argument("--output-path", type=Path, metavar="FILE", help="final MKV file path")
+    result.add_argument("-o", "--output", type=Path, metavar="FILE", help="final MKV file path")
     result.add_argument(
-        "--concurrent-fragments",
-        type=positive_int,
-        default=DEFAULT_CONCURRENT_FRAGMENTS,
-        metavar="N",
-        help=f"number of fragments downloaded in parallel (default: {DEFAULT_CONCURRENT_FRAGMENTS})",
-    )
-    result.add_argument(
-        "--fragment-retries",
-        type=positive_int,
-        default=DEFAULT_FRAGMENT_RETRIES,
-        metavar="N",
-        help=f"retries for each unavailable fragment (default: {DEFAULT_FRAGMENT_RETRIES})",
-    )
-    result.add_argument("--strict-fragments", action="store_true", help="fail on unavailable fragments")
-    result.add_argument("--verbose", action="store_true", help="show yt-dlp and ffmpeg diagnostic output")
-    result.add_argument(
-        "--sample-percent",
+        "--sample",
+        nargs="?",
+        const=1.0,
         type=percentage,
         metavar="PERCENT",
-        help="download only the leading PERCENT of the title while keeping normal muxing",
-    )
-    result.add_argument("--keep-temp-on-error", action="store_true", help="preserve failed download workspaces")
-    result.add_argument(
-        "--format-selector",
-        default=DEFAULT_TRACK_SELECTION.audio_format,
-        metavar="SELECTOR",
-        help="yt-dlp format selector (default preserves all audio tracks)",
+        help="download only the leading percentage of the title (default: 1)",
     )
     result.add_argument(
-        "--subtitle-langs",
-        default=DEFAULT_TRACK_SELECTION.subtitle_languages,
-        metavar="LANGS",
-        help="yt-dlp subtitle language selector (default: all except live chat)",
+        "--debug",
+        action="store_true",
+        help="show diagnostics and preserve temporary files when an error occurs",
     )
-    result.add_argument("--no-embed-subs", action="store_true", help="do not embed downloaded subtitles")
-    result.add_argument("--no-validate-output", action="store_true", help="skip ffprobe output validation")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -271,26 +234,18 @@ def main(argv: list[str] | None = None) -> int:
         print("Error: ffmpeg was not found. Follow the README instructions.", file=sys.stderr)
         return 2
     ffprobe = shutil.which("ffprobe")
-    tracks = TrackSelection(
-        audio_format=args.format_selector,
-        subtitle_languages=args.subtitle_langs,
-        embed_subtitles=not args.no_embed_subs,
-    )
     options = DownloadOptions(
-        concurrent_fragments=args.concurrent_fragments,
-        fragment_retries=args.fragment_retries,
-        strict_fragments=args.strict_fragments,
-        sample_percent=args.sample_percent,
-        verbose=args.verbose,
-        tracks=tracks,
+        sample_percent=args.sample,
+        verbose=args.debug,
+        tracks=DEFAULT_TRACK_SELECTION,
     )
     return run_download(
         args.url,
         options=options,
         yt_dlp=yt_dlp,
-        output_path=args.output_path,
-        keep_temp_on_error=args.keep_temp_on_error,
-        validate_output=not args.no_validate_output,
+        output_path=args.output,
+        keep_temp_on_error=args.debug,
+        validate_output=True,
         ffprobe=ffprobe,
     )
 

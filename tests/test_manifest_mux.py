@@ -14,7 +14,6 @@ from manifest_mux import (
     build_command,
     parse_args,
     percentage,
-    positive_int,
     run_download,
     sample_duration_seconds,
     validate_url,
@@ -47,6 +46,8 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(command[command.index("--sub-langs") + 1], "all,-live_chat")
         self.assertIn("--audio-multistreams", command)
         self.assertIn("--embed-subs", command)
+        self.assertIn("--abort-on-unavailable-fragments", command)
+        self.assertEqual(command[command.index("--fragment-retries") + 1], "30")
         self.assertEqual(command[command.index("--remux-video") + 1], "mkv")
         print_index = command.index("--print-to-file")
         self.assertEqual(command[print_index + 1], "after_move:%(filepath)s")
@@ -74,10 +75,15 @@ class CommandTests(unittest.TestCase):
         self.assertNotIn("--embed-subs", command)
 
     def test_parse_args_preserves_legacy_download_invocation(self) -> None:
-        args = parse_args([SAMPLE_URL, "--fragment-retries", "25", "--strict-fragments"])
+        args = parse_args([SAMPLE_URL, "--sample", "--debug", "-o", "sample.mkv"])
         self.assertEqual(args.command, "download")
-        self.assertEqual(args.fragment_retries, 25)
-        self.assertTrue(args.strict_fragments)
+        self.assertEqual(args.sample, 1.0)
+        self.assertTrue(args.debug)
+        self.assertEqual(args.output, Path("sample.mkv"))
+
+    def test_sample_accepts_an_explicit_percentage(self) -> None:
+        args = parse_args([SAMPLE_URL, "--sample", "5"])
+        self.assertEqual(args.sample, 5.0)
 
     def test_parse_args_supports_operational_subcommands(self) -> None:
         self.assertEqual(parse_args(["doctor"]).command, "doctor")
@@ -107,14 +113,6 @@ class CommandTests(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(argparse.ArgumentTypeError):
                     percentage(value)
-
-    def test_positive_int_must_be_positive(self) -> None:
-        self.assertEqual(positive_int("3"), 3)
-        for value in ["0", "-1", "not-a-number"]:
-            with self.subTest(value=value):
-                with self.assertRaises(argparse.ArgumentTypeError):
-                    positive_int(value)
-
 
 class DownloadLifecycleTests(unittest.TestCase):
     def test_success_validates_moves_final_video_and_removes_workspace(self) -> None:

@@ -5,7 +5,7 @@ from typing import FrozenSet
 
 
 DEFAULT_CONCURRENT_FRAGMENTS = 1
-DEFAULT_FRAGMENT_RETRIES = 10
+DEFAULT_FRAGMENT_RETRIES = 30
 
 
 @dataclass(frozen=True)
@@ -21,7 +21,7 @@ class TrackSelection:
 class DownloadOptions:
     concurrent_fragments: int = DEFAULT_CONCURRENT_FRAGMENTS
     fragment_retries: int = DEFAULT_FRAGMENT_RETRIES
-    strict_fragments: bool = False
+    strict_fragments: bool = True
     sample_percent: float | None = None
     verbose: bool = False
     tracks: TrackSelection = TrackSelection()
