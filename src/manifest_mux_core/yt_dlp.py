@@ -67,22 +67,3 @@ class YtDlpClient:
 
     def run(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         return subprocess.run(command, check=True, text=True)
-
-    def duration_command(self, url: str) -> list[str]:
-        return [self.executable, "--no-playlist", "--skip-download", "--print", "%(duration)s", url]
-
-    def read_duration(self, url: str) -> float:
-        """Resolve duration before converting a percentage sample to seconds."""
-        result = subprocess.run(
-            self.duration_command(url),
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        try:
-            duration = float(result.stdout.strip().splitlines()[-1])
-        except (IndexError, ValueError) as error:
-            raise ValueError("the source did not provide a usable duration") from error
-        if duration <= 0:
-            raise ValueError("the source did not provide a positive duration")
-        return duration

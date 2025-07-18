@@ -28,20 +28,15 @@ def validate_url(value: str) -> str:
     return value
 
 
-def percentage(value: str) -> float:
-    """Parse a percentage in the open interval (0, 100]."""
+def positive_seconds(value: str) -> float:
+    """Parse a strictly positive duration in seconds."""
     try:
         number = float(value)
     except ValueError as error:
         raise argparse.ArgumentTypeError("must be a number") from error
-    if not 0 < number <= 100:
-        raise argparse.ArgumentTypeError("must be greater than zero and at most 100")
+    if number <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
     return number
-
-
-def sample_duration_seconds(duration_seconds: float, sample_percent: float) -> float:
-    """Return a non-empty leading sample duration from a media duration."""
-    return max(1.0, duration_seconds * sample_percent / 100)
 
 
 def build_command(
@@ -96,14 +91,6 @@ def run_download(
     try:
         filepath_marker = temporary_dir / ".last-download-path"
         client = YtDlpClient(yt_dlp)
-        section_end_seconds = None
-        if options.sample_percent is not None:
-            try:
-                duration = client.read_duration(url)
-            except (subprocess.CalledProcessError, ValueError) as error:
-                print(f"Error: unable to determine source duration: {error}", file=sys.stderr)
-                return 1
-            section_end_seconds = sample_duration_seconds(duration, options.sample_percent)
         try:
             client.run(
                 client.download_command(
@@ -111,7 +98,7 @@ def run_download(
                     temporary_dir,
                     filepath_marker,
                     options,
-                    section_end_seconds=section_end_seconds,
+                    section_end_seconds=options.sample_seconds,
                 )
             )
         except subprocess.CalledProcessError as error:
@@ -163,10 +150,10 @@ def add_download_arguments(result: argparse.ArgumentParser) -> None:
     result.add_argument(
         "--sample",
         nargs="?",
-        const=1.0,
-        type=percentage,
-        metavar="PERCENT",
-        help="download only the leading percentage of the title (default: 1)",
+        const=60.0,
+        type=positive_seconds,
+        metavar="SECONDS",
+        help="download only the beginning of the title (default: 60 seconds)",
     )
     result.add_argument(
         "--debug",
@@ -235,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     ffprobe = shutil.which("ffprobe")
     options = DownloadOptions(
-        sample_percent=args.sample,
+        sample_seconds=args.sample,
         verbose=args.debug,
         tracks=DEFAULT_TRACK_SELECTION,
     )

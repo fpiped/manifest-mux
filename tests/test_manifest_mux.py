@@ -13,9 +13,8 @@ from manifest_mux import (
     TrackSelection,
     build_command,
     parse_args,
-    percentage,
+    positive_seconds,
     run_download,
-    sample_duration_seconds,
     validate_url,
 )
 from manifest_mux_core.media import MediaValidationError, probe_media, validate_media
@@ -77,13 +76,13 @@ class CommandTests(unittest.TestCase):
     def test_parse_args_preserves_legacy_download_invocation(self) -> None:
         args = parse_args([SAMPLE_URL, "--sample", "--debug", "-o", "sample.mkv"])
         self.assertEqual(args.command, "download")
-        self.assertEqual(args.sample, 1.0)
+        self.assertEqual(args.sample, 60.0)
         self.assertTrue(args.debug)
         self.assertEqual(args.output, Path("sample.mkv"))
 
-    def test_sample_accepts_an_explicit_percentage(self) -> None:
-        args = parse_args([SAMPLE_URL, "--sample", "5"])
-        self.assertEqual(args.sample, 5.0)
+    def test_sample_accepts_an_explicit_duration(self) -> None:
+        args = parse_args([SAMPLE_URL, "--sample", "90"])
+        self.assertEqual(args.sample, 90.0)
 
     def test_parse_args_supports_operational_subcommands(self) -> None:
         self.assertEqual(parse_args(["doctor"]).command, "doctor")
@@ -100,19 +99,17 @@ class CommandTests(unittest.TestCase):
             SAMPLE_URL,
             Path("/tmp/download"),
             Path("marker"),
-            DownloadOptions(sample_percent=1),
+            DownloadOptions(sample_seconds=12.5),
             section_end_seconds=12.5,
         )
         self.assertEqual(command[command.index("--download-sections") + 1], "*0-12.5")
-        self.assertEqual(sample_duration_seconds(1_250, 1), 12.5)
-        self.assertEqual(sample_duration_seconds(20, 1), 1.0)
 
-    def test_percentage_must_be_within_zero_and_one_hundred(self) -> None:
-        self.assertEqual(percentage("1"), 1.0)
-        for value in ["0", "100.1", "not-a-number"]:
+    def test_sample_duration_must_be_positive(self) -> None:
+        self.assertEqual(positive_seconds("60"), 60.0)
+        for value in ["0", "-1", "not-a-number"]:
             with self.subTest(value=value):
                 with self.assertRaises(argparse.ArgumentTypeError):
-                    percentage(value)
+                    positive_seconds(value)
 
 class DownloadLifecycleTests(unittest.TestCase):
     def test_success_validates_moves_final_video_and_removes_workspace(self) -> None:
@@ -190,7 +187,7 @@ class DownloadLifecycleTests(unittest.TestCase):
             self.assertTrue((workspace / "movie.mkv").exists())
             shutil.rmtree(workspace)
 
-    def test_sample_download_resolves_duration_before_downloading(self) -> None:
+    def test_sample_download_uses_requested_seconds(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             workspace = root / "workspace"
@@ -198,7 +195,7 @@ class DownloadLifecycleTests(unittest.TestCase):
             destination = root / "sample.mkv"
 
             def complete_download(_self: YtDlpClient, command: list[str]) -> None:
-                self.assertEqual(command[command.index("--download-sections") + 1], "*0-12.0")
+                self.assertEqual(command[command.index("--download-sections") + 1], "*0-12")
                 marker = Path(command[command.index("--print-to-file") + 2])
                 video = marker.parent / "sample.mkv"
                 video.write_text("video")
@@ -206,13 +203,12 @@ class DownloadLifecycleTests(unittest.TestCase):
 
             with (
                 patch("manifest_mux.tempfile.mkdtemp", return_value=str(workspace)),
-                patch.object(YtDlpClient, "read_duration", return_value=1_200),
                 patch.object(YtDlpClient, "run", autospec=True, side_effect=complete_download),
                 patch("manifest_mux.validate_media", return_value=MediaProbe(12.0, frozenset({"video", "audio"}))),
             ):
                 result = run_download(
                     SAMPLE_URL,
-                    options=DownloadOptions(sample_percent=1),
+                    options=DownloadOptions(sample_seconds=12),
                     yt_dlp="yt-dlp",
                     output_path=destination,
                     ffprobe="ffprobe",

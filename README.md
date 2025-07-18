@@ -84,14 +84,14 @@ before the application receives it.
 
 - `-o, --output FILE`: exact path and filename for the final MKV. If omitted,
   the output is `~/Downloads/<title>.mkv`.
-- `--sample [PERCENT]`: download only the leading percentage while still
-  running normal muxing, subtitle embedding, and validation. Without a value,
-  it defaults to 1%.
+- `--sample [SECONDS]`: download only the beginning while still running normal
+  muxing, subtitle embedding, and validation. Without a value, it downloads the
+  first 60 seconds.
 - `--debug`: show detailed yt-dlp/ffmpeg diagnostics and preserve temporary
   files when an error occurs.
 
-For a quick end-to-end test that downloads approximately the first 1% of a
-title and verifies the resulting muxed file:
+For a quick end-to-end test that downloads the first 60 seconds and verifies
+the resulting muxed file:
 
 ```bash
 uv run manifest-mux download 'https://example.com/it/watch/12015?e=38156' \
@@ -99,9 +99,8 @@ uv run manifest-mux download 'https://example.com/it/watch/12015?e=38156' \
   --output ~/Movies/my-title-sample.mkv
 ```
 
-The percentage is converted to a time range using the duration reported by the
-source. HLS/DASH streams are segmented, so the actual duration can be slightly
-longer than the requested percentage.
+HLS/DASH streams are segmented, so the actual duration can be slightly longer
+than the requested number of seconds.
 
 ## Architecture
 
