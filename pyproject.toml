@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 package-dir = {"" = "src"}
 py-modules = ["streaming_downloader"]
-packages = ["yt_dlp_plugins", "yt_dlp_plugins.extractor"]
+packages = ["streaming_downloader_core", "yt_dlp_plugins", "yt_dlp_plugins.extractor"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
