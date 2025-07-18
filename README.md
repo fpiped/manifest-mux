@@ -22,6 +22,8 @@ For each requested title, the downloader:
 - downloads all available subtitles except live chat, converts them to WebVTT,
   and embeds them in the final file;
 - merges the selected streams into a single Matroska (`.mkv`) container;
+- preserves provider track titles and generates missing technical titles from
+  resolution, codec, language, channel count, and forced-subtitle flags;
 - downloads one title at a time, never a whole playlist.
 
 Fragments, subtitle files, and yt-dlp state are created in the system temporary
@@ -34,6 +36,11 @@ missing section as a successful archive.
 
 Before delivering the final file, the application uses `ffprobe` to verify that
 the container contains both a video and an audio stream.
+
+Track titles supplied by the provider are never overwritten. Missing titles
+are generated in forms such as `Full HD (1080p, H.264)`, `ita — AAC Stereo`,
+or `eng — Forced`. The metadata pass uses stream copy and does not re-encode
+audio or video.
 
 ## Installation
 

@@ -18,7 +18,8 @@ from manifest_mux import (
     validate_url,
 )
 from manifest_mux_core.media import MediaValidationError, probe_media, validate_media
-from manifest_mux_core.models import MediaProbe
+from manifest_mux_core.metadata import apply_track_titles, generated_track_title
+from manifest_mux_core.models import MediaProbe, MediaStream
 from manifest_mux_core.yt_dlp import YtDlpClient
 
 
@@ -135,6 +136,7 @@ class DownloadLifecycleTests(unittest.TestCase):
                     options=DownloadOptions(),
                     yt_dlp="yt-dlp",
                     output_path=destination,
+                    ffmpeg="ffmpeg",
                     ffprobe="ffprobe",
                 )
 
@@ -211,6 +213,7 @@ class DownloadLifecycleTests(unittest.TestCase):
                     options=DownloadOptions(sample_seconds=12),
                     yt_dlp="yt-dlp",
                     output_path=destination,
+                    ffmpeg="ffmpeg",
                     ffprobe="ffprobe",
                 )
 
@@ -231,11 +234,53 @@ class MediaValidationTests(unittest.TestCase):
 
         self.assertEqual(probe.duration_seconds, 125.5)
         self.assertEqual(probe.stream_types, frozenset({"video", "audio", "subtitle"}))
+        self.assertEqual(len(probe.streams), 3)
 
     def test_validate_media_requires_video_and_audio(self) -> None:
         with patch("manifest_mux_core.media.probe_media", return_value=MediaProbe(10.0, frozenset({"video"}))):
             with self.assertRaisesRegex(MediaValidationError, "audio"):
                 validate_media(Path("movie.mkv"), "ffprobe")
+
+
+class TrackMetadataTests(unittest.TestCase):
+    def test_generates_technical_titles_without_language_assumptions(self) -> None:
+        video = MediaStream(index=0, codec_type="video", codec_name="h264", height=1080, width=1920)
+        audio = MediaStream(index=1, codec_type="audio", codec_name="aac", channels=6, language="jpn")
+        subtitle = MediaStream(index=2, codec_type="subtitle", language="eng", forced=True)
+
+        self.assertEqual(generated_track_title(video), "Full HD (1080p, H.264)")
+        self.assertEqual(generated_track_title(audio), "jpn — AAC 5.1")
+        self.assertEqual(generated_track_title(subtitle), "eng — Forced")
+
+    def test_preserves_provider_track_title(self) -> None:
+        stream = MediaStream(index=1, codec_type="audio", title="Original Audio", language="jpn")
+        self.assertIsNone(generated_track_title(stream))
+
+    def test_applies_titles_with_stream_copy_remux(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "movie.mkv"
+            path.write_text("original")
+            probe = MediaProbe(
+                duration_seconds=60,
+                stream_types=frozenset({"video", "audio"}),
+                streams=(
+                    MediaStream(index=0, codec_type="video", codec_name="h264", height=1080),
+                    MediaStream(index=1, codec_type="audio", codec_name="aac", channels=2, language="ita"),
+                ),
+            )
+
+            def complete_remux(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+                self.assertIn("copy", command)
+                self.assertIn("title=Full HD (1080p, H.264)", command)
+                self.assertIn("title=ita — AAC Stereo", command)
+                Path(command[-1]).write_text("remuxed")
+                return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+            with patch("manifest_mux_core.metadata.subprocess.run", side_effect=complete_remux):
+                changed = apply_track_titles(path, "ffmpeg", probe)
+
+            self.assertTrue(changed)
+            self.assertEqual(path.read_text(), "remuxed")
 
 
 if __name__ == "__main__":

@@ -28,11 +28,28 @@ class DownloadOptions:
 
 
 @dataclass(frozen=True)
+class MediaStream:
+    """Technical metadata for one stream inside a media container."""
+
+    index: int
+    codec_type: str
+    codec_name: str | None = None
+    width: int | None = None
+    height: int | None = None
+    channels: int | None = None
+    channel_layout: str | None = None
+    title: str | None = None
+    language: str | None = None
+    forced: bool = False
+
+
+@dataclass(frozen=True)
 class MediaProbe:
     """Minimal, container-agnostic result returned by ffprobe."""
 
     duration_seconds: float | None
     stream_types: FrozenSet[str]
+    streams: tuple[MediaStream, ...] = ()
 
     @property
     def has_video(self) -> bool:

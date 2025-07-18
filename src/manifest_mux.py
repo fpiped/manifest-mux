@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from manifest_mux_core.media import MediaValidationError, validate_media
+from manifest_mux_core.metadata import apply_track_titles
 from manifest_mux_core.models import (
     DownloadOptions,
     TrackSelection,
@@ -82,6 +83,7 @@ def run_download(
     output_path: Path | None = None,
     keep_temp_on_error: bool = False,
     validate_output: bool = True,
+    ffmpeg: str | None = None,
     ffprobe: str | None = None,
 ) -> int:
     """Download, validate, and atomically deliver one title."""
@@ -115,7 +117,12 @@ def run_download(
                 print("Error: ffprobe was not found. Follow the README instructions.", file=sys.stderr)
                 return 2
             try:
-                validate_media(downloaded_video, ffprobe)
+                probe = validate_media(downloaded_video, ffprobe)
+                if ffmpeg is None:
+                    print("Error: ffmpeg was not found. Follow the README instructions.", file=sys.stderr)
+                    return 2
+                if apply_track_titles(downloaded_video, ffmpeg, probe):
+                    validate_media(downloaded_video, ffprobe)
             except MediaValidationError as error:
                 print(f"Error: output validation failed: {error}", file=sys.stderr)
                 return 1
@@ -217,7 +224,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "formats":
         return run_read_only_command(client, client.formats_command(args.url))
 
-    if shutil.which("ffmpeg") is None:
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
         print("Error: ffmpeg was not found. Follow the README instructions.", file=sys.stderr)
         return 2
     ffprobe = shutil.which("ffprobe")
@@ -233,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
         output_path=args.output,
         keep_temp_on_error=args.debug,
         validate_output=True,
+        ffmpeg=ffmpeg,
         ffprobe=ffprobe,
     )
 
