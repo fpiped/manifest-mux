@@ -1,6 +1,6 @@
-# streaming-downloader
+# manifest-mux
 
-`streaming-downloader` is a manifest-aware command-line wrapper around
+`manifest-mux` is a manifest-aware command-line wrapper around
 `yt-dlp`. It downloads a single movie or TV episode from supported HLS embed
 pages and can inspect any source that yt-dlp understands, including HLS and
 DASH manifests.
@@ -54,14 +54,14 @@ brew install ffmpeg
 The original shorthand remains supported:
 
 ```bash
-uv run streaming-downloader 'https://example.com/it/watch/12015?e=38156' \
+uv run manifest-mux 'https://example.com/it/watch/12015?e=38156' \
   --output-path ~/Movies/my-title.mkv
 ```
 
 It is equivalent to the explicit `download` command:
 
 ```bash
-uv run streaming-downloader download 'https://example.com/it/watch/12015?e=38156' \
+uv run manifest-mux download 'https://example.com/it/watch/12015?e=38156' \
   --output-path ~/Movies/my-title.mkv
 ```
 
@@ -69,13 +69,13 @@ Use these read-only commands to understand a source before downloading it:
 
 ```bash
 # Print yt-dlp metadata as JSON
-uv run streaming-downloader inspect 'https://example.com/it/watch/12015?e=38156'
+uv run manifest-mux inspect 'https://example.com/it/watch/12015?e=38156'
 
 # List video, audio, and subtitle formats
-uv run streaming-downloader formats 'https://example.com/it/watch/12015?e=38156'
+uv run manifest-mux formats 'https://example.com/it/watch/12015?e=38156'
 
 # Check local tool availability
-uv run streaming-downloader doctor
+uv run manifest-mux doctor
 ```
 
 Always wrap pasted URLs in single quotes. In particular, zsh interprets `?` as
@@ -107,7 +107,7 @@ before the application receives it.
 For an archival download with more retries and no skipped fragments:
 
 ```bash
-uv run streaming-downloader download 'https://example.com/it/watch/12015?e=38156' \
+uv run manifest-mux download 'https://example.com/it/watch/12015?e=38156' \
   --output-path ~/Movies/my-title.mkv \
   --fragment-retries 30 \
   --strict-fragments \
@@ -118,7 +118,7 @@ For a quick end-to-end test that downloads approximately the first 1% of a
 title and verifies the resulting muxed file:
 
 ```bash
-uv run streaming-downloader download 'https://example.com/it/watch/12015?e=38156' \
+uv run manifest-mux download 'https://example.com/it/watch/12015?e=38156' \
   --sample-percent 1 \
   --output-path ~/Movies/my-title-sample.mkv
 ```

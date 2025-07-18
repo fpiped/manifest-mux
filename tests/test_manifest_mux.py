@@ -8,7 +8,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
-from streaming_downloader import (
+from manifest_mux import (
     DownloadOptions,
     TrackSelection,
     build_command,
@@ -19,9 +19,9 @@ from streaming_downloader import (
     sample_duration_seconds,
     validate_url,
 )
-from streaming_downloader_core.media import MediaValidationError, probe_media, validate_media
-from streaming_downloader_core.models import MediaProbe
-from streaming_downloader_core.yt_dlp import YtDlpClient
+from manifest_mux_core.media import MediaValidationError, probe_media, validate_media
+from manifest_mux_core.models import MediaProbe
+from manifest_mux_core.yt_dlp import YtDlpClient
 
 
 SAMPLE_URL = "https://example.com/it/watch/12015"
@@ -126,9 +126,9 @@ class DownloadLifecycleTests(unittest.TestCase):
                 marker.write_text(str(video), encoding="utf-8")
 
             with (
-                patch("streaming_downloader.tempfile.mkdtemp", return_value=str(workspace)),
+                patch("manifest_mux.tempfile.mkdtemp", return_value=str(workspace)),
                 patch.object(YtDlpClient, "run", autospec=True, side_effect=complete_download),
-                patch("streaming_downloader.validate_media", return_value=MediaProbe(60.0, frozenset({"video", "audio"}))),
+                patch("manifest_mux.validate_media", return_value=MediaProbe(60.0, frozenset({"video", "audio"}))),
             ):
                 result = run_download(
                     SAMPLE_URL,
@@ -148,7 +148,7 @@ class DownloadLifecycleTests(unittest.TestCase):
             workspace.mkdir()
             stderr = io.StringIO()
             with (
-                patch("streaming_downloader.tempfile.mkdtemp", return_value=str(workspace)),
+                patch("manifest_mux.tempfile.mkdtemp", return_value=str(workspace)),
                 patch.object(YtDlpClient, "run", autospec=True, side_effect=subprocess.CalledProcessError(1, ["yt-dlp"])),
                 redirect_stderr(stderr),
             ):
@@ -171,9 +171,9 @@ class DownloadLifecycleTests(unittest.TestCase):
                 marker.write_text(str(video), encoding="utf-8")
 
             with (
-                patch("streaming_downloader.tempfile.mkdtemp", return_value=str(workspace)),
+                patch("manifest_mux.tempfile.mkdtemp", return_value=str(workspace)),
                 patch.object(YtDlpClient, "run", autospec=True, side_effect=complete_download),
-                patch("streaming_downloader.validate_media", side_effect=MediaValidationError("missing audio")),
+                patch("manifest_mux.validate_media", side_effect=MediaValidationError("missing audio")),
             ):
                 result = run_download(
                     SAMPLE_URL,
@@ -202,10 +202,10 @@ class DownloadLifecycleTests(unittest.TestCase):
                 marker.write_text(str(video), encoding="utf-8")
 
             with (
-                patch("streaming_downloader.tempfile.mkdtemp", return_value=str(workspace)),
+                patch("manifest_mux.tempfile.mkdtemp", return_value=str(workspace)),
                 patch.object(YtDlpClient, "read_duration", return_value=1_200),
                 patch.object(YtDlpClient, "run", autospec=True, side_effect=complete_download),
-                patch("streaming_downloader.validate_media", return_value=MediaProbe(12.0, frozenset({"video", "audio"}))),
+                patch("manifest_mux.validate_media", return_value=MediaProbe(12.0, frozenset({"video", "audio"}))),
             ):
                 result = run_download(
                     SAMPLE_URL,
@@ -227,14 +227,14 @@ class MediaValidationTests(unittest.TestCase):
             stdout='{"format": {"duration": "125.5"}, "streams": [{"codec_type": "video"}, {"codec_type": "audio"}, {"codec_type": "subtitle"}]}',
             stderr="",
         )
-        with patch("streaming_downloader_core.media.subprocess.run", return_value=completed):
+        with patch("manifest_mux_core.media.subprocess.run", return_value=completed):
             probe = probe_media(Path("movie.mkv"), "ffprobe")
 
         self.assertEqual(probe.duration_seconds, 125.5)
         self.assertEqual(probe.stream_types, frozenset({"video", "audio", "subtitle"}))
 
     def test_validate_media_requires_video_and_audio(self) -> None:
-        with patch("streaming_downloader_core.media.probe_media", return_value=MediaProbe(10.0, frozenset({"video"}))):
+        with patch("manifest_mux_core.media.probe_media", return_value=MediaProbe(10.0, frozenset({"video"}))):
             with self.assertRaisesRegex(MediaValidationError, "audio"):
                 validate_media(Path("movie.mkv"), "ffprobe")
 

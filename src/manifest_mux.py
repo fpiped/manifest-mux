@@ -8,14 +8,14 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from streaming_downloader_core.media import MediaValidationError, validate_media
-from streaming_downloader_core.models import (
+from manifest_mux_core.media import MediaValidationError, validate_media
+from manifest_mux_core.models import (
     DEFAULT_CONCURRENT_FRAGMENTS,
     DEFAULT_FRAGMENT_RETRIES,
     DownloadOptions,
     TrackSelection,
 )
-from streaming_downloader_core.yt_dlp import YtDlpClient
+from manifest_mux_core.yt_dlp import YtDlpClient
 
 
 COMMANDS = frozenset({"download", "inspect", "formats", "doctor"})
@@ -103,7 +103,7 @@ def run_download(
     ffprobe: str | None = None,
 ) -> int:
     """Download, validate, and atomically deliver one title."""
-    temporary_dir = Path(tempfile.mkdtemp(prefix="streaming-downloader-"))
+    temporary_dir = Path(tempfile.mkdtemp(prefix="manifest-mux-"))
     failed = True
 
     try:
@@ -226,7 +226,7 @@ def parser() -> argparse.ArgumentParser:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     values = list(sys.argv[1:] if argv is None else argv)
-    # Preserve the original `streaming-downloader URL` invocation.
+    # Preserve the original `manifest-mux URL` invocation.
     if values and values[0] not in COMMANDS and values[0] not in {"-h", "--help"}:
         values.insert(0, "download")
     return parser().parse_args(values)

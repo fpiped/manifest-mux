@@ -38,7 +38,7 @@ wheels = [
 ]
 
 [[package]]
-name = "streaming-downloader"
+name = "manifest-mux"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

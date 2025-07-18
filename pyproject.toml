@@ -1,15 +1,15 @@
 [project]
-name = "streaming-downloader"
+name = "manifest-mux"
 version = "0.1.0"
 requires-python = ">=3.10"
-description = "Downloader per titoli via yt-dlp"
+description = "Manifest-aware media downloader and muxer powered by yt-dlp"
 dependencies = [
     "pycryptodomex>=3.23.0",
     "yt-dlp>=2026.7.4",
 ]
 
 [project.scripts]
-streaming-downloader = "streaming_downloader:main"
+manifest-mux = "manifest_mux:main"
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -17,8 +17,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["streaming_downloader"]
-packages = ["streaming_downloader_core", "yt_dlp_plugins", "yt_dlp_plugins.extractor"]
+py-modules = ["manifest_mux"]
+packages = ["manifest_mux_core", "yt_dlp_plugins", "yt_dlp_plugins.extractor"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

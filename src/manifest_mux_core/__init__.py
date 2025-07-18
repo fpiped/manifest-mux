@@ -1,4 +1,4 @@
-"""Core building blocks for the streaming-downloader command-line tool."""
+"""Core building blocks for the manifest-mux command-line tool."""
 
 from .models import DownloadOptions, MediaProbe, TrackSelection
 
